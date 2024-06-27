@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Search and Analysis</title>
+    <style>
+        /* Your existing styles here */
+    </style>
+</head>
+<body>
+    <section class="ai" id="AI">
+        <div class="content">
+            <h2>Let's build something great together</h2>
+            <p class="author">by Safaa Mazin</p>
+            <div class="textbox">
+                <div class="input-group">
+                    <label for="Ent_Q">Add your Question:</label>
+                    <textarea id="Ent_Q" name="Enter your Question" rows="5" required></textarea>
+                </div>
+                <div class="input-group">
+                    <label for="Res_Q">Results:</label>
+                    <textarea id="Res_Q" name="the result" rows="10" readonly></textarea>
+                </div>
+                <div class="button-group">
+                    <button class="rr" id="searchButton">Research analysis</button>
+                    <button id="clearButton">Clear</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.min.js"></script>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.worker.min.js';
+        
+        const pdfPaths = [
+            'files/Questions.pdf',
+            'files/Computer Network- - part 1.pdf',
+            'files/Terminology.pdf'
+        ];
+    
+        async function searchInPdf(pdfPath, searchTerm) {
+            try {
+                const loadingTask = pdfjsLib.getDocument(pdfPath);
+                const pdf = await loadingTask.promise;
+                const numPages = pdf.numPages;
+                let resultText = '';
+    
+                for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+                    const page = await pdf.getPage(pageNum);
+                    const textContent = await page.getTextContent();
+                    const text = textContent.items.map(item => item.str).join(' ');
+    
+                    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    
+                    for (let sentence of sentences) {
+                        if (sentence.toLowerCase().includes(searchTerm.toLowerCase())) {
+                            resultText += `Found match in ${pdfPath} on page ${pageNum}: ${sentence.trim()}\n\n`;
+                        }
+                    }
+                }
+    
+                return resultText;
+            } catch (err) {
+                console.error(`Error processing ${pdfPath}:`, err);
+                return `An error occurred while processing ${pdfPath}: ${err.message}\n\n`;
+            }
+        }
+    
+        async function searchInAllPdfs(searchTerm) {
+            let results = '';
+            for (const pdfPath of pdfPaths) {
+                const result = await searchInPdf(pdfPath, searchTerm);
+                results += result;
+            }
+            return results.trim() || `'${searchTerm}' was not found in any of the documents.`;
+        }
+    
+        function performDataAnalysis(results) {
+            const data = results.split('\n\n').map(result => {
+                const [source, content] = result.split(': ', 2);
+                return { source, content };
+            });
+    
+            let analysisResults = '';
+    
+            // Count occurrences by source
+            const sourceCount = data.reduce((acc, item) => {
+                acc[item.source] = (acc[item.source] || 0) + 1;
+                return acc;
+            }, {});
+            
+            analysisResults += "Occurrences by source:\n";
+            for (const [source, count] of Object.entries(sourceCount)) {
+                analysisResults += `${source}: ${count}\n`;
+            }
+            analysisResults += "\n";
+    
+            // Perform text analysis
+            const wordCounts = data.map(item => item.content.split(' ').length);
+            const avgWordCount = wordCounts.reduce((sum, count) => sum + count, 0) / wordCounts.length;
+            const minWordCount = Math.min(...wordCounts);
+            const maxWordCount = Math.max(...wordCounts);
+    
+            analysisResults += `Average word count: ${avgWordCount.toFixed(2)}\n`;
+            analysisResults += `Minimum word count: ${minWordCount}\n`;
+            analysisResults += `Maximum word count: ${maxWordCount}\n\n`;
+    
+            // Time series analysis (placeholder)
+            analysisResults += "Time Series Analysis: Not available in this dataset\n";
+    
+            return analysisResults;
+        }
+    
+        document.getElementById('searchButton').addEventListener('click', async () => {
+            try {
+                const searchTerm = document.getElementById('Ent_Q').value.trim();
+                if (!searchTerm) {
+                    alert('Please enter a search term.');
+                    return;
+                }
+    
+                document.getElementById('Res_Q').value = 'Searching...';
+                const result = await searchInAllPdfs(searchTerm);
+                const analysis = performDataAnalysis(result);
+                document.getElementById('Res_Q').value = result + '\n\nData Analysis:\n' + analysis;
+            } catch (error) {
+                console.error("Error during search:", error);
+                document.getElementById('Res_Q').value = 'An error occurred during the search. Please try again.';
+            }
+        });
+    
+        document.getElementById('clearButton').addEventListener('click', () => {
+            document.getElementById('Ent_Q').value = '';
+            document.getElementById('Res_Q').value = '';
+        });
+    </script>
+</body>
+</html>
